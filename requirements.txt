@@ -1,0 +1,29 @@
+# Machine Learning & Data Science
+pandas
+numpy
+scikit-learn
+xgboost
+shap
+
+# RAG & Embeddings
+sentence-transformers
+faiss-cpu
+
+# API & Backend
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+psycopg2-binary
+
+# Visualization & Notebooks
+matplotlib
+seaborn
+jupyter
+ipykernel
+
+# Testing
+pytest
+
+# LLM Integration
+google-generativeai
