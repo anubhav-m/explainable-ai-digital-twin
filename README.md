@@ -32,23 +32,27 @@ A modern, patient-centric healthcare dashboard that creates a longitudinal, virt
 Make sure you have Node.js (v18+) and Python (v3.9+) installed on your machine.
 
 ### 1. Backend Setup
-Navigate to the root directory and install the Python dependencies:
+Navigate to the root directory and set up your Python environment:
 
 ```bash
+# Create and activate a virtual environment (Windows)
+python -m venv venv
+venv\Scripts\activate
+
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-Before running the server, create a `.env` file in the root directory and configure your MongoDB connection string:
+Before running the server, create a `.env` file in the root directory and configure your MongoDB connection string and API keys:
 
 ```env
-MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/?retryWrites=true&w=majority
+# Add your LLM API keys here as well
 ```
 
 ```bash
-# Start the FastAPI server
-cd backend
-uvicorn api.main:app --reload
+# Start the FastAPI server (must be run from the root directory)
+python -m uvicorn backend.api.main:app --reload
 ```
 The backend API will be running at `http://127.0.0.1:8000`.
 
