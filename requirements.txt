@@ -15,6 +15,13 @@ uvicorn
 pydantic
 sqlalchemy
 psycopg2-binary
+pymongo
+python-dotenv
+passlib[bcrypt]
+python-jose[cryptography]
+email-validator
+python-multipart
+bcrypt<5
 
 # Visualization & Notebooks
 matplotlib
