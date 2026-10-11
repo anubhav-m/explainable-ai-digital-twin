@@ -1,0 +1,62 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "tight-leading",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/assigned.html"
+        ],
+        "createdAt": "2026-10-11T19:07:43.330Z",
+        "reason": "agent decided: spent decision sketch, not shipped; the user chose a different card"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/challenger-annual.html"
+        ],
+        "createdAt": "2026-10-11T19:07:43.370Z",
+        "reason": "agent decided: spent decision sketch, not shipped; the built app is the artifact"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/assigned.html"
+        ],
+        "createdAt": "2026-10-11T19:14:28.795Z",
+        "reason": "agent decided: spent decision sketch from before DESIGN.md existed, not shipped"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/model-pick.html"
+        ],
+        "createdAt": "2026-10-11T19:14:28.835Z",
+        "reason": "agent decided: spent decision sketch from before DESIGN.md existed, not shipped"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/challenger-annual.html"
+        ],
+        "createdAt": "2026-10-11T19:14:28.872Z",
+        "reason": "agent decided: spent decision sketch from before DESIGN.md existed, not shipped"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/canon.html"
+        ],
+        "createdAt": "2026-10-11T19:14:28.909Z",
+        "reason": "agent decided: spent decision sketch from before DESIGN.md existed, not shipped"
+      }
+    ]
+  }
+}

@@ -1,111 +1,129 @@
-import React, { useState } from 'react';
-import { FileText, Bot, Sparkles, BookOpen } from 'lucide-react';
+import { useState } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../App';
+import { apiErrorMessage } from '../utils/api';
+import { ErrorNote, PageHead, Plate, Sk } from './ui';
+
+// Renders **bold** spans inside one line of text
+const withBold = (text: string) =>
+  text.split(/(\*\*.*?\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={i} className="font-semibold">{part.slice(2, -2)}</strong>
+      : part
+  );
+
+const NarrativeSkeleton = () => (
+  <div aria-busy="true" aria-label="Retrieving evidence and writing your explanation">
+    <Sk className="h-5 w-64" />
+    {['w-full', 'w-11/12', 'w-full', 'w-2/3'].map((w, i) => <Sk key={i} className={`mt-3 h-4 max-w-[70ch] ${w}`} />)}
+    <Sk className="mt-8 h-5 w-52" />
+    {['w-11/12', 'w-full', 'w-5/6', 'w-1/2'].map((w, i) => <Sk key={i} className={`mt-3 h-4 max-w-[70ch] ${w}`} />)}
+  </div>
+);
 
 export const AIExplanationTab = ({ patientId }: { patientId: string }) => {
   const [loading, setLoading] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
+  const [mode, setMode] = useState<string | null>(null);
   const [sources, setSources] = useState<any[]>([]);
+  const [error, setError] = useState('');
 
   const fetchExplanation = () => {
     setLoading(true);
+    setError('');
     axios.post(`${API_BASE}/patients/${patientId}/ask`, { query: "Explain my diabetes risk factors" })
       .then(res => {
         setExplanation(res.data.explanation);
+        setMode(res.data.mode);
         setSources(res.data.sources || []);
         setLoading(false);
       })
       .catch(err => {
         console.error(err);
-        setExplanation("Error generating explanation. Please try again.");
+        setError(apiErrorMessage(err, "The explanation could not be written. Try again."));
         setLoading(false);
       });
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">AI Clinical Explanation</h2>
-        </div>
-      </div>
+    <>
+      <PageHead
+        title="Explain it to me"
+        term="AI Explanation · RAG"
+        action={
+          <button onClick={fetchExplanation} disabled={loading} className="btn">
+            {loading ? 'Writing' : explanation ? 'Write it again' : 'Explain my estimate'}
+          </button>
+        }
+      >
+        A plain-language read of your twin, written from your own numbers and backed by guideline text.
+      </PageHead>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+      <div className="grid gap-10 lg:grid-cols-12">
+
         {/* RAG Generation Panel */}
-        <div className="md:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 min-h-[400px] flex flex-col">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-700 pb-4 mb-4">
-            <div className="flex items-center">
-              <Bot className="w-6 h-6 text-indigo-600 dark:text-indigo-400 mr-2" />
-              <h3 className="font-semibold text-gray-800 dark:text-gray-100">Clinical Narrative</h3>
-            </div>
-            {!explanation && !loading && (
-              <button 
-                onClick={fetchExplanation}
-                className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-sm font-semibold transition-colors flex items-center"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate Insight
-              </button>
+        <Plate className="min-h-[400px] lg:col-span-8" label="Explanation">
+          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-[1.4rem] leading-tight tracking-[-0.01em]">What your numbers mean</h2>
+            {mode && !loading && (
+              <span className="label bg-seal px-2.5 py-1">
+                {mode === 'llm' ? 'Written by Gemini' : 'Template mode: no LLM configured'}
+              </span>
             )}
           </div>
 
+          {error && <div className="mb-6"><ErrorNote message={error} onRetry={fetchExplanation} /></div>}
+
           {loading ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
-              <Sparkles className="w-8 h-8 mb-4 animate-spin text-indigo-300 dark:text-indigo-700" />
-              <p>Retrieving evidence and generating explanation...</p>
-            </div>
+            <NarrativeSkeleton />
           ) : !explanation ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
-              <FileText className="w-12 h-12 mb-4 opacity-20" />
-              <p>Click "Generate Insight" to synthesize the live Digital Twin state.</p>
+            <div className="dots flex min-h-[260px] items-end">
+              <p className="max-w-[44ch] bg-sheet p-5 text-mute">Nothing written yet. Use "Explain my estimate" and the assistant will read your latest twin state and the guidelines.</p>
             </div>
           ) : (
-            <div className="flex-1 text-gray-700 dark:text-gray-300 leading-relaxed space-y-4 animate-in fade-in duration-500">
-              {explanation.split('\n').map((paragraph, idx) => {
-                if (!paragraph.trim()) return null;
-                // Simple bolding for **text**
-                const parts = paragraph.split(/(\*\*.*?\*\*)/g);
-                return (
-                  <p key={idx}>
-                    {parts.map((part, i) => {
-                      if (part.startsWith('**') && part.endsWith('**')) {
-                        return <strong key={i} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>;
-                      }
-                      return part;
-                    })}
-                  </p>
-                );
+            <div className="view max-w-[70ch] space-y-3 text-[17px] leading-relaxed">
+              {explanation.split('\n').map((line, idx) => {
+                const text = line.trim();
+                if (!text) return null;
+                if (text.startsWith('#')) {
+                  return <h3 key={idx} className="pt-4 text-xl font-medium leading-tight first:pt-0">{text.replace(/^#+\s*/, '')}</h3>;
+                }
+                if (/^[-*]\s/.test(text)) {
+                  return <p key={idx} className="relative pl-6 before:absolute before:left-0 before:top-[0.8em] before:h-px before:w-3 before:bg-ink">{withBold(text.slice(2))}</p>;
+                }
+                return <p key={idx}>{withBold(text)}</p>;
               })}
             </div>
           )}
-        </div>
+        </Plate>
 
         {/* Retrieved Sources */}
-        <div className="bg-gray-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-gray-200 dark:border-slate-700">
-          <div className="flex items-center mb-6">
-            <BookOpen className="w-5 h-5 text-gray-600 dark:text-gray-400 mr-2" />
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100">Retrieved Guidelines</h3>
-          </div>
-          
-          <div className="space-y-4">
-            {sources.length > 0 ? (
-              sources.map((src, idx) => (
-                <div key={idx} className="p-3 bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 shadow-sm text-sm text-gray-600 dark:text-gray-300">
-                  <span className="font-semibold text-indigo-700 dark:text-indigo-400 block mb-1">{src.source}</span>
-                  "{src.text}"
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                {explanation ? "No sources were returned." : "Sources will appear here after generation."}
-              </p>
-            )}
-          </div>
-        </div>
+        <Plate className="lg:col-span-4" i={1} label="Guideline sources">
+          <h2 className="text-[1.4rem] leading-tight tracking-[-0.01em]">Guidelines it read</h2>
+
+          {loading ? (
+            <div className="mt-5" aria-hidden>
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="border-t border-hair py-4"><Sk className="h-3 w-32" /><Sk className="mt-3 h-4 w-full" /><Sk className="mt-2 h-4 w-4/5" /></div>
+              ))}
+            </div>
+          ) : sources.length > 0 ? (
+            <ul className="view mt-5 border-b border-hair">
+              {sources.map((src, idx) => (
+                <li key={idx} className="border-t border-hair py-4">
+                  <p className="label text-mute">{src.source}</p>
+                  <blockquote className="mt-2 text-[15px]">{src.text}</blockquote>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-mute">
+              {explanation ? "No sources were returned." : "The passages used for your explanation will be listed here."}
+            </p>
+          )}
+        </Plate>
 
       </div>
-    </div>
+    </>
   );
 };

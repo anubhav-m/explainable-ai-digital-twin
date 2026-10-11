@@ -1,173 +1,220 @@
-import React, { useState } from 'react';
-import { Settings, Play, ArrowRight, Activity, Zap } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useEffect, useState } from 'react';
+import { ArrowRight, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE } from '../App';
+import { apiErrorMessage } from '../utils/api';
+import { useApi } from '../utils/useApi';
+import { FEATURE_LABELS } from '../utils/features';
+import { HbA1cScale, StatusBadge } from './HbA1cScale';
+import { EmptyNote, ErrorNote, PageHead, Plate, Sk, signed, useCountUp } from './ui';
 
-export const WhatIfSimulator = ({ patientId }: { patientId: string }) => {
-  const [bmi, setBmi] = useState(33.0);
-  const [activity, setActivity] = useState(2); // 2 = Moderate, 1 = Vigorous
-  
+type Scenario = { BMXBMI: number; BMXWAIST: number; LBXGLU: number; PAQ605: number };
+
+const SLIDERS = [
+  { code: 'BMXBMI', unit: 'kg/m²', min: 15, max: 55, step: 0.5 },
+  { code: 'BMXWAIST', unit: 'cm', min: 60, max: 160, step: 1 },
+  { code: 'LBXGLU', unit: 'mg/dL', min: 70, max: 300, step: 1 },
+] as const;
+
+const Counted = ({ value, className }: { value: number; className: string }) => {
+  const shown = useCountUp(value, 800);
+  return <p className={className}>{shown.toFixed(2)}%</p>;
+};
+
+const ControlsSkeleton = () => (
+  <div className="grid gap-10 lg:grid-cols-12" aria-busy="true" aria-label="Loading your current values">
+    <Plate className="lg:col-span-5">
+      <Sk className="h-7 w-56" />
+      {Array.from({ length: 3 }, (_, i) => (
+        <div key={i} className="mt-8"><div className="flex justify-between"><Sk className="h-4 w-32" /><Sk className="h-4 w-28" /></div><Sk className="mt-5 h-px w-full" /></div>
+      ))}
+      <Sk className="mt-10 h-11 w-full" />
+    </Plate>
+    <Plate className="lg:col-span-7" i={1}><Sk className="h-7 w-48" /><Sk className="mt-6 h-64 w-full" /></Plate>
+  </div>
+);
+
+const OutcomeSkeleton = () => (
+  <div aria-busy="true" aria-label="Running the model">
+    <div className="flex items-end justify-between gap-6">
+      <div><Sk className="h-3 w-28" /><Sk className="mt-3 h-14 w-40" /></div>
+      <Sk className="h-6 w-16" />
+      <div><Sk className="h-3 w-28" /><Sk className="mt-3 h-14 w-40" /></div>
+    </div>
+    <Sk className="mt-12 h-px w-full" />
+    <Sk className="mt-9 h-1 w-full" />
+    <Sk className="mt-10 h-4 w-full" /><Sk className="mt-2 h-4 w-3/4" />
+  </div>
+);
+
+export const WhatIfSimulator = ({ patientId, onLogVisit }: { patientId: string; onLogVisit: () => void }) => {
+  const twin = useApi(`/patients/${patientId}/twin`);
+  const [current, setCurrent] = useState<Scenario | null>(null);
+  const [target, setTarget] = useState<Scenario | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [scenario, setScenario] = useState<any>(null);
+  const [error, setError] = useState('');
+
+  const state = twin.data?.current_state || {};
+  const hasVisit = Object.keys(state).length > 0;
+
+  useEffect(() => {
+    if (!twin.data || !hasVisit) return;
+    // Sliders start at the patient's own values from their last visit; a late response never overwrites edits
+    const values = { BMXBMI: state.BMXBMI, BMXWAIST: state.BMXWAIST, LBXGLU: state.LBXGLU, PAQ605: state.PAQ605 === 1 ? 1 : 2 };
+    setCurrent(values);
+    setTarget(prev => prev ?? values);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [twin.data]);
+
+  // Only send the inputs that were actually changed
+  const changed = current && target
+    ? Object.fromEntries(Object.entries(target).filter(([code, value]) => value !== current[code as keyof Scenario]))
+    : {};
+  const nothingChanged = Object.keys(changed).length === 0;
 
   const runSimulation = () => {
     setLoading(true);
+    setError('');
     axios.post(`${API_BASE}/patients/${patientId}/simulate`, {
       scenario_name: "Custom Intervention",
-      modified_variables: {
-        BMXBMI: bmi,
-        PAQ605: activity
-      }
+      modified_variables: changed
     })
     .then(res => {
       setScenario(res.data);
       setLoading(false);
     })
     .catch(err => {
-      console.error(err);
+      setError(apiErrorMessage(err, 'The simulation did not run. Try again.'));
       setLoading(false);
     });
   };
 
-  const dummyData = [
-    { name: 'Baseline', hba1c: scenario?.baseline_prediction || 7.2 },
-    { name: 'Month 1', hba1c: (scenario?.baseline_prediction || 7.2) + ((scenario?.prediction_difference || 0) * 0.3) },
-    { name: 'Month 2', hba1c: (scenario?.baseline_prediction || 7.2) + ((scenario?.prediction_difference || 0) * 0.7) },
-    { name: 'Target', hba1c: scenario?.scenario_prediction || 7.2 },
-  ];
+  const head = (
+    <PageHead title="Try a change" term="What-If Simulator">
+      Change your inputs and see how the model's HbA1c estimate responds.
+    </PageHead>
+  );
+
+  if (!twin.data) return <>{head}{twin.error ? <ErrorNote message={twin.error} onRetry={twin.reload} /> : <ControlsSkeleton />}</>;
+  if (!hasVisit) {
+    return (
+      <>
+        {head}
+        <EmptyNote title="Nothing to change yet" action={<button onClick={onLogVisit} className="btn">Log your first visit</button>}>
+          The simulator starts from your own values, so it needs one logged visit.
+        </EmptyNote>
+      </>
+    );
+  }
+  if (!current || !target) return <>{head}<ControlsSkeleton /></>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">What-If Simulator</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Test clinical interventions and see how the Digital Twin reacts in real-time.</p>
-        </div>
-      </div>
+    <>
+      {head}
+      <div className="grid gap-10 lg:grid-cols-12">
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
         {/* Controls */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
-          <div className="flex items-center mb-6">
-            <Settings className="w-5 h-5 text-gray-400 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Intervention Variables</h3>
-          </div>
-          
-          <div className="space-y-6">
-            <div>
-              <label className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <span>Target BMI</span>
-                <span className="text-blue-600 dark:text-blue-400 font-bold">{bmi}</span>
-              </label>
-              <input 
-                type="range" 
-                min="20" max="40" step="0.5"
-                value={bmi}
-                onChange={(e) => setBmi(parseFloat(e.target.value))}
-                className="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              />
-              <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
-                <span>Healthy (20)</span>
-                <span>Obese (40+)</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <span>Physical Activity Level</span>
-                <span className="text-blue-600 dark:text-blue-400 font-bold">{activity === 1 ? 'Vigorous' : activity === 2 ? 'Moderate' : 'Low'}</span>
-              </label>
-              <input 
-                type="range" 
-                min="1" max="3" step="1"
-                value={activity}
-                onChange={(e) => setActivity(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              />
-              <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
-                <span>Vigorous</span>
-                <span>Moderate</span>
-                <span>Low</span>
-              </div>
-            </div>
-
-            <button 
-              onClick={runSimulation}
-              disabled={loading}
-              className={`w-full py-3 text-white font-semibold rounded-xl transition-colors flex items-center justify-center mt-4 ${loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-            >
-              {loading ? (
-                 <Activity className="w-5 h-5 mr-2 animate-spin" />
-              ) : (
-                 <Play className="w-5 h-5 mr-2" />
-              )}
-              {loading ? 'Simulating...' : 'Run Live ML Simulation'}
+        <Plate landed className="lg:col-span-5" label="What to change">
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 className="text-[1.4rem] leading-tight tracking-[-0.01em]">What would you change?</h2>
+            <button onClick={() => setTarget(current)} disabled={nothingChanged} className="link label inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-40">
+              <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.5} /> Reset
             </button>
           </div>
-        </div>
+
+          <div className="mt-7 space-y-7">
+            {SLIDERS.map(({ code, unit, min, max, step }) => {
+              const moved = target[code] !== current[code];
+              return (
+                <div key={code}>
+                  <label htmlFor={`range-${code}`} className="flex items-baseline justify-between gap-4">
+                    <span>{FEATURE_LABELS[code]}</span>
+                    <span className="text-mute">
+                      {moved && <>{current[code]} <ArrowRight className="mx-1 inline h-3.5 w-3.5" strokeWidth={1.5} aria-label="to" /> </>}
+                      <span className={moved ? 'bg-seal px-1.5 font-medium text-ink' : 'text-ink'}>{target[code]}</span> {unit}
+                    </span>
+                  </label>
+                  <input
+                    id={`range-${code}`}
+                    type="range"
+                    min={Math.min(min, current[code])} max={Math.max(max, current[code])} step={step}
+                    value={target[code]}
+                    onChange={(e) => setTarget({ ...target, [code]: parseFloat(e.target.value) })}
+                    className="range mt-2"
+                  />
+                </div>
+              );
+            })}
+
+            <fieldset>
+              <legend className="mb-3">Does your work involve vigorous physical activity?</legend>
+              <div className="grid grid-cols-2">
+                {[{ value: 1, label: 'Yes' }, { value: 2, label: 'No' }].map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={target.PAQ605 === option.value}
+                    onClick={() => setTarget({ ...target, PAQ605: option.value })}
+                    className={`label min-h-[44px] border border-ink transition-colors duration-100 first:border-r-0 ${target.PAQ605 === option.value ? 'bg-ink text-sheet' : 'hover:bg-seal'}`}
+                  >
+                    {option.label}{current.PAQ605 === option.value ? ' (now)' : ''}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <button onClick={runSimulation} disabled={loading || nothingChanged} className="btn w-full">
+              {loading ? 'Running the model' : nothingChanged ? 'Change a value to simulate' : 'Run the simulation'}
+            </button>
+            {error && <ErrorNote message={error} />}
+          </div>
+        </Plate>
 
         {/* Results */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden">
-          <div className="flex items-center mb-6">
-            <Zap className="w-5 h-5 text-amber-500 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Simulation Outcome</h3>
-          </div>
+        <Plate landed className="lg:col-span-7" i={1} label="Simulation outcome">
+          <h2 className="mb-7 text-[1.4rem] leading-tight tracking-[-0.01em]">What the model expects</h2>
 
-          {!scenario && !loading ? (
-            <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-500">
-              <Activity className="w-12 h-12 mb-3 opacity-20" />
-              <p>Adjust variables and run simulation to see estimated effects.</p>
-            </div>
+          {loading ? (
+            <OutcomeSkeleton />
           ) : scenario ? (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex items-center justify-between mb-8">
-                <div className="text-center">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Baseline HbA1c</p>
-                  <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">{scenario.baseline_prediction.toFixed(2)}%</p>
+            <div key={scenario.scenario_prediction} className="view">
+              <div className="flex flex-wrap items-end justify-between gap-6">
+                <div>
+                  <h3 className="label text-mute">Current estimate</h3>
+                  <p className="mt-2 text-[3.5rem] leading-none tracking-[-0.02em] text-mute">{scenario.baseline_prediction.toFixed(2)}%</p>
+                  <div className="mt-3"><StatusBadge value={scenario.baseline_prediction} /></div>
                 </div>
-                <ArrowRight className="w-8 h-8 text-gray-300 dark:text-gray-600" />
-                <div className="text-center">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Simulated HbA1c</p>
-                  <p className={`text-3xl font-bold ${scenario.prediction_difference < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                    {scenario.scenario_prediction.toFixed(2)}%
-                  </p>
+                <p className="flex items-center gap-3 bg-seal px-3 py-1.5 text-xl">
+                  {signed(scenario.prediction_difference)} <ArrowRight className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+                </p>
+                <div>
+                  <h3 className="label text-mute">Scenario estimate</h3>
+                  <Counted value={scenario.scenario_prediction} className="mt-2 text-[3.5rem] leading-none tracking-[-0.02em]" />
+                  <div className="mt-3"><StatusBadge value={scenario.scenario_prediction} /></div>
                 </div>
               </div>
 
-              <div className="h-48 w-full mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={dummyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorHbA1c" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={scenario.prediction_difference < 0 ? "#10b981" : "#e11d48"} stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor={scenario.prediction_difference < 0 ? "#10b981" : "#e11d48"} stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#9ca3af" strokeOpacity={0.2} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} />
-                    <YAxis domain={[6.0, 8.0]} axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-slate-800)', color: 'var(--tw-colors-gray-100)' }} />
-                    <Area type="monotone" dataKey="hba1c" stroke={scenario.prediction_difference < 0 ? "#10b981" : "#e11d48"} strokeWidth={3} fillOpacity={1} fill="url(#colorHbA1c)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+              <div className="mt-10">
+                <HbA1cScale markers={[
+                  { label: 'Now', value: scenario.baseline_prediction, hollow: true },
+                  { label: 'Scenario', value: scenario.scenario_prediction },
+                ]} />
               </div>
-              
-              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-sm text-blue-800 dark:text-blue-300 leading-relaxed border border-blue-100 dark:border-blue-900/50">
-                <span className="font-semibold text-blue-900 dark:text-blue-200">AI Insight: </span> 
-                {scenario.message}
-              </div>
+
+              <p className="mt-6 max-w-[68ch] border-t border-hair pt-5">
+                {scenario.message} Inputs you did not change keep their values from your last visit. This is a model estimate, not a promise of what your body will do.
+              </p>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-gray-500">
-               <Activity className="w-12 h-12 mb-3 opacity-20 animate-spin" />
-               <p>Running live ML inference...</p>
+            <div className="dots flex min-h-[300px] items-end">
+              <p className="max-w-[40ch] bg-sheet p-5 text-mute">Move a slider or switch the activity answer, then run the simulation. The result appears here.</p>
             </div>
           )}
-        </div>
+        </Plate>
 
       </div>
-    </div>
+    </>
   );
 };

@@ -1,0 +1,31 @@
+{
+  "model_version": "1.1.0",
+  "feature_version": "v2",
+  "trained_on": "2026-09-30",
+  "dataset": "NHANES 2017-2018: people with both HbA1c and fasting glucose measured",
+  "n_rows": 2887,
+  "evaluation": {
+    "train_rows": 2309,
+    "test_rows": 578,
+    "mean_baseline": {
+      "r2": -0.002,
+      "mae": 0.646,
+      "rmse": 1.082
+    },
+    "glucose_only_linear": {
+      "r2": 0.757,
+      "mae": 0.371,
+      "rmse": 0.533
+    },
+    "linear_regression": {
+      "r2": 0.772,
+      "mae": 0.352,
+      "rmse": 0.516
+    },
+    "xgboost": {
+      "r2": 0.769,
+      "mae": 0.346,
+      "rmse": 0.519
+    }
+  }
+}

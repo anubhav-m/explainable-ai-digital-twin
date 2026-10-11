@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T00:00:00.000Z",
+  "title": "Design System: Explainable AI Digital Twin",
+  "extensions": {
+    "colorMeta": {
+      "ink": { "role": "primary", "displayName": "Ink", "canonical": "#16181a", "tonalRamp": ["#16181a", "#2e3134", "#474a4e", "#5c5f63", "#84878b", "#a9abae", "#cfd0d2", "#f0f0f1"] },
+      "seal": { "role": "secondary", "displayName": "Seal Green", "canonical": "#d5ebdd", "tonalRamp": ["#14261b", "#20382b", "#35573f", "#4f7a5c", "#76a385", "#a3c8ae", "#d5ebdd", "#ecf6ef"] },
+      "status-normal": { "role": "tertiary", "displayName": "Status Normal", "canonical": "#2f8f5b", "tonalRamp": ["#0f2e1d", "#1a4a30", "#256b45", "#2f8f5b", "#4fb783", "#84cfa6", "#b9e4cb", "#e5f5ec"] },
+      "status-prediabetes": { "role": "tertiary", "displayName": "Status Prediabetes", "canonical": "#d99a12", "tonalRamp": ["#3d2b05", "#664809", "#96690d", "#d99a12", "#e5b13a", "#edc76f", "#f4dda6", "#fbf2dd"] },
+      "status-diabetes": { "role": "tertiary", "displayName": "Status Diabetes", "canonical": "#c8321e", "tonalRamp": ["#3a0e08", "#66190f", "#962517", "#c8321e", "#ee6a55", "#f29886", "#f7c5bb", "#fcebe7"] },
+      "sheet": { "role": "neutral", "displayName": "Sheet", "canonical": "#f5f4f6", "tonalRamp": ["#121416", "#1a1c1f", "#34373a", "#5c5f63", "#a3a6aa", "#c9c7c4", "#f5f4f6", "#fbfafb"] },
+      "hair": { "role": "neutral", "displayName": "Hairline", "canonical": "#c9c7c4", "tonalRamp": ["#1f1e1d", "#34373a", "#5a5855", "#85827e", "#a9a6a2", "#c9c7c4", "#e1dfdd", "#f3f2f1"] },
+      "mute": { "role": "neutral", "displayName": "Mute", "canonical": "#5c5f63", "tonalRamp": ["#1b1c1e", "#303235", "#46484c", "#5c5f63", "#7f8286", "#a3a6aa", "#c8cacc", "#ededee"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The HbA1c estimate. One per screen." },
+      "headline": { "displayName": "Headline", "purpose": "Page titles." },
+      "title": { "displayName": "Title", "purpose": "Plate headings." },
+      "figure": { "displayName": "Figure", "purpose": "Secondary numbers in the four-up row and equations." },
+      "body": { "displayName": "Body", "purpose": "Running text, 62 to 70ch." },
+      "label": { "displayName": "Label", "purpose": "Mono caps for nav tokens, field labels, tags, buttons and chart text." }
+    },
+    "shadows": [
+      { "name": "tooltip", "value": "0 8px 24px -12px rgb(0 0 0 / 0.35)", "purpose": "Chart tooltip only; nothing else in the system casts a shadow." }
+    ],
+    "motion": [
+      { "name": "ease", "value": "cubic-bezier(0.19, 1, 0.22, 1)", "purpose": "The one curve: plate entrance, crosshair snap, bar growth, marker travel, panel expansion." },
+      { "name": "plate-in", "value": "0.7s, 70ms stagger, translateY(14px) and opacity", "purpose": "First screen after load only." },
+      { "name": "cross-in", "value": "0.6s, 260ms after its plate", "purpose": "Crosshairs snap onto plate corners, first screen only." },
+      { "name": "view-in", "value": "0.2s ease-out opacity", "purpose": "Tab switches and landed plate contents." },
+      { "name": "invert", "value": "0.1s ease", "purpose": "Button hover inversion." },
+      { "name": "turn", "value": "25s linear infinite", "purpose": "The seal's text ring." },
+      { "name": "shimmer", "value": "1.5s linear infinite", "purpose": "Skeleton blocks." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "nav-inline", "value": "1360px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled action on a screen, such as Log a visit.",
+      "html": "<button class=\"ds-btn\">Log a visit</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid var(--ink); background: var(--ink); color: var(--sheet); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: background-color 0.1s ease, color 0.1s ease; } .ds-btn:hover { background: transparent; color: var(--ink); } .ds-btn:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary actions and retry.",
+      "html": "<button class=\"ds-btn-outline\">Try again</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid var(--ink); background: transparent; color: var(--ink); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: background-color 0.1s ease, color 0.1s ease; } .ds-btn-outline:hover { background: var(--ink); color: var(--sheet); } .ds-btn-outline:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Text, number and select inputs in the visit form.",
+      "html": "<label class=\"ds-field\"><span>Fasting glucose (mg/dL)</span><input type=\"number\" value=\"108\"></label>",
+      "css": ".ds-field { display: block; } .ds-field span { display: block; margin-bottom: 8px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; color: var(--mute); } .ds-field input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--hair); border-radius: 0; background: var(--raised); color: var(--ink); font-size: 16px; } .ds-field input:hover { border-color: var(--mute); } .ds-field input:focus { outline: none; border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }"
+    },
+    {
+      "name": "Status Tag",
+      "kind": "chip",
+      "refersTo": "status-tag",
+      "description": "Names the HbA1c range beside any estimate.",
+      "html": "<span class=\"ds-tag\"><i></i>Prediabetes range · 5.7–6.4%</span>",
+      "css": ".ds-tag { display: inline-flex; align-items: center; gap: 10px; padding: 7px 12px; border: 1px solid var(--ink); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink); } .ds-tag i { width: 9px; height: 9px; background: var(--st-prediabetes); }"
+    },
+    {
+      "name": "Plate",
+      "kind": "card",
+      "description": "The content container: no fill, no border, registered by crosshairs at two corners.",
+      "html": "<section class=\"ds-plate\"><h2>Seven inputs, and how far each moved you</h2><p>Average start 5.60 +0.32 from your inputs = 5.92</p></section>",
+      "css": ".ds-plate { position: relative; padding: 28px; color: var(--ink); } .ds-plate h2 { font-size: 1.4rem; font-weight: 400; letter-spacing: -0.01em; margin: 0; } .ds-plate p { margin: 12px 0 0; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); } .ds-plate::before, .ds-plate::after { content: ''; position: absolute; width: 13px; height: 13px; background: linear-gradient(var(--ink), var(--ink)) center / 1px 13px no-repeat, linear-gradient(var(--ink), var(--ink)) center / 13px 1px no-repeat; } .ds-plate::before { left: -6px; top: -6px; } .ds-plate::after { right: -6px; bottom: -6px; }"
+    },
+    {
+      "name": "Nav Token",
+      "kind": "nav",
+      "description": "Section token: patient label, then the technical term in mute.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-on\" href=\"#\">Today</a><a href=\"#\">Why<span> · SHAP</span></a><a href=\"#\">History<span> · Twin</span></a></nav>",
+      "css": ".ds-nav { display: flex; gap: 28px; } .ds-nav a { position: relative; padding: 14px 0; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; text-decoration: none; color: var(--mute); transition: color 0.1s ease; } .ds-nav a:hover, .ds-nav a.ds-on { color: var(--ink); } .ds-nav a span { color: var(--mute); } .ds-nav a.ds-on::after { content: ''; position: absolute; left: 0; right: 0; bottom: 6px; height: 1px; background: var(--ink); }"
+    },
+    {
+      "name": "SHAP Row",
+      "kind": "custom",
+      "description": "One input's push on the estimate: filled bar up, outlined bar down, either side of a centreline.",
+      "html": "<div class=\"ds-shap\"><span>Fasting glucose</span><span class=\"ds-v\">108 mg/dL</span><i><b style=\"left:50%;width:42%\"></b></i><em>+0.28</em></div><div class=\"ds-shap\"><span>Age</span><span class=\"ds-v\">34 years</span><i><b class=\"ds-down\" style=\"left:36.5%;width:13.5%\"></b></i><em>−0.09</em></div>",
+      "css": ".ds-shap { display: grid; grid-template-columns: 1.2fr 0.8fr 2fr 64px; align-items: center; gap: 16px; padding: 13px 0; border-top: 1px solid var(--hair); color: var(--ink); } .ds-shap .ds-v { color: var(--mute); } .ds-shap i { position: relative; height: 12px; } .ds-shap i::before { content: ''; position: absolute; left: 50%; top: -6px; width: 1px; height: 24px; background: var(--hair); } .ds-shap b { position: absolute; top: 0; height: 12px; background: var(--ink); } .ds-shap b.ds-down { background: none; border: 1px solid var(--ink); box-sizing: border-box; } .ds-shap em { font-style: normal; font-family: var(--font-mono); font-size: 15px; text-align: right; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Plate Section",
+    "overview": "Each result is a plate on a near-white sheet, the way a design annual prints its work: registered at the corners with crosshairs, ruled with hairlines, set in one grotesque, and signed with a single pale green stamp. A health estimate presented this way reads as a printed proof someone checked, not as a dashboard widget. The sheet is never neutral: it drifts warm at the top left and green at the bottom right, so ink looks printed on it.\n\nThe system is nearly monochrome on purpose. Ink, hairline and sheet do the structural work; the three HbA1c status colours are the only saturation and always carry a label. Direction is drawn as shape, not colour: a filled bar pushes the estimate up, an outlined bar pulls it down. The dark theme inverts the same roles onto an ink-tinted near-black. Purple is ruled out by the user.",
+    "keyCharacteristics": [
+      "Plates without boxes: no card backgrounds, no card borders, no shadows on content.",
+      "Zero radius on every rectangle; circles only for stamps, markers and icon buttons.",
+      "One grotesque for display and body, one mono for labels and measurements.",
+      "Status colour is the only saturated colour on the sheet.",
+      "Patient language leads, the technical term sits beside it."
+    ],
+    "rules": [
+      { "name": "The Signal Rule", "body": "Saturated colour appears only as an HbA1c status, and always next to its words.", "section": "colors" },
+      { "name": "The Shape-Not-Hue Rule", "body": "Up and down are filled and outlined, either side of one centreline. Never red and blue.", "section": "colors" },
+      { "name": "The No Purple Rule", "body": "No violet, indigo or blue-to-purple gradient anywhere.", "section": "colors" },
+      { "name": "The Regular Weight Rule", "body": "Display and headings stay at 400. Weight 600 is for the product name and inline emphasis only.", "section": "typography" },
+      { "name": "The Measuring Voice Rule", "body": "Mono is for labels and for columns of measurements that must align. It is never a costume for \"technical\".", "section": "typography" },
+      { "name": "The Flat Sheet Rule", "body": "Content never gets a shadow, a tinted card or a glass panel.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do put every estimate next to its range, its typical error and the words \"model estimate\".",
+      "Do use hairlines and crosshairs to structure a screen before reaching for a container.",
+      "Do keep one HbA1c scale domain across screens.",
+      "Do pair every patient label with its technical term where an evaluator would look for it.",
+      "Do honour prefers-reduced-motion: the entrance, the shimmer and the turning seal all stop."
+    ],
+    "donts": [
+      "Don't use purple, indigo, or gradient fills.",
+      "Don't round a rectangle or add a shadow to content.",
+      "Don't encode up and down, or good and bad, in colour alone.",
+      "Don't replay the entrance on a tab change or count a health number up from a value the patient never had.",
+      "Don't add icons as decoration beside headings."
+    ]
+  }
+}

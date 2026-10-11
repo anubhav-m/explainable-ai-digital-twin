@@ -1,94 +1,97 @@
-import React, { useState, useEffect } from 'react';
-import { Lightbulb, TrendingUp, TrendingDown, Info } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
-import axios from 'axios';
-import { API_BASE } from '../App';
+import { useApi } from '../utils/useApi';
+import { ShapLegend, ShapRows, shapRows } from './ShapRows';
+import { EmptyNote, ErrorNote, PageHead, Plate, Sk, signed } from './ui';
 
-export const ExplainabilityTab = ({ patientId }: { patientId: string }) => {
-  const [data, setData] = useState<any>(null);
+const ExplainSkeleton = () => (
+  <div className="grid gap-10 lg:grid-cols-12" aria-busy="true" aria-label="Loading the breakdown">
+    <Plate className="lg:col-span-8">
+      <Sk className="h-7 w-80 max-w-full" />
+      <Sk className="mb-6 mt-3 h-3 w-72" />
+      {Array.from({ length: 7 }, (_, i) => (
+        <div key={i} className="flex items-center gap-4 border-t border-hair py-[15px]">
+          <Sk className="h-4 w-36" /><Sk className="h-4 w-20" /><Sk className="h-3 flex-1" /><Sk className="h-4 w-10" />
+        </div>
+      ))}
+    </Plate>
+    <Plate className="lg:col-span-4" i={1}>
+      <Sk className="h-3 w-40" /><Sk className="mt-3 h-10 w-28" /><Sk className="mt-3 h-4 w-full" />
+      <Sk className="mt-10 h-3 w-40" /><Sk className="mt-3 h-10 w-28" /><Sk className="mt-3 h-4 w-full" />
+    </Plate>
+  </div>
+);
 
-  useEffect(() => {
-    axios.get(`${API_BASE}/patients/${patientId}/prediction`)
-      .then(res => setData(res.data))
-      .catch(err => console.error(err));
-  }, [patientId]);
+export const ExplainabilityTab = ({ patientId, onLogVisit }: { patientId: string; onLogVisit: () => void }) => {
+  const { data, error, reload } = useApi(`/patients/${patientId}/prediction`);
 
-  if (!data) return <div className="p-6 text-gray-500">Loading SHAP explanations...</div>;
-  if (!data.current_prediction) return <div className="p-6 text-gray-500">No SHAP data available yet. Please log your first visit in the Overview tab.</div>;
+  const head = (
+    <PageHead title="Why this number" term="Explainability · SHAP TreeExplainer">
+      How each of your inputs moved the current HbA1c estimate.
+    </PageHead>
+  );
+
+  if (!data) return <>{head}{error ? <ErrorNote message={error} onRetry={reload} /> : <ExplainSkeleton />}</>;
+  if (!data.current_prediction) {
+    return (
+      <>
+        {head}
+        <EmptyNote title="Nothing to explain yet" action={<button onClick={onLogVisit} className="btn">Log your first visit</button>}>
+          Once you log a visit, this page shows which inputs pushed your estimate up or down.
+        </EmptyNote>
+      </>
+    );
+  }
 
   const currentPred = data.current_prediction;
-  const shapLocal = currentPred.shap_local || {};
-  
-  // Convert dict to array and sort by absolute magnitude
-  const shapData = Object.keys(shapLocal).map(key => ({
-    feature: key,
-    value: shapLocal[key],
-    type: shapLocal[key] >= 0 ? 'positive' : 'negative'
-  })).sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).slice(0, 5); // top 5
-
-  const topDriver = shapData.find(d => d.type === 'positive');
-  const topProtector = shapData.find(d => d.type === 'negative');
+  const rows = shapRows(currentPred);
+  const totalPush = rows.reduce((sum, d) => sum + d.value, 0);
+  const baseValue: number = currentPred.shap_base_value ?? currentPred.predicted_value - totalPush;
+  const topDriver = rows.find(d => d.value > 0);
+  const topProtector = rows.find(d => d.value < 0);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Model Explainability (SHAP)</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Local feature contributions driving the current HbA1c prediction.</p>
-        </div>
-        <div className="bg-blue-50 dark:bg-slate-800/50 text-blue-700 dark:text-blue-400 px-4 py-2 rounded-full font-medium flex items-center border border-blue-200 dark:border-slate-700">
-          <Lightbulb className="w-4 h-4 mr-2" />
-          TreeExplainer
-        </div>
-      </div>
+    <>
+      {head}
+      <div className="grid gap-10 lg:grid-cols-12">
+        <Plate landed className="lg:col-span-8" label="Input contributions">
+          <h2 className="text-[1.4rem] leading-tight tracking-[-0.01em]">Your inputs, largest push first</h2>
 
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
-        <div className="flex items-start justify-between mb-8">
+          {/* The arithmetic closes on screen: start + pushes = estimate */}
+          <div className="my-6 flex flex-wrap items-end gap-x-5 gap-y-3 border-y border-hair py-4">
+            <p><span className="block text-[2.1rem] leading-tight tracking-[-0.01em]">{baseValue.toFixed(2)}%</span><span className="label text-mute">The model's average start</span></p>
+            <span className="pb-6 text-2xl text-mute" aria-hidden>{totalPush >= 0 ? '+' : '−'}</span>
+            <p><span className="block text-[2.1rem] leading-tight tracking-[-0.01em]">{Math.abs(totalPush).toFixed(2)}</span><span className="label text-mute">Your inputs combined</span></p>
+            <span className="pb-6 text-2xl text-mute" aria-hidden>=</span>
+            <p><span className="block text-[2.1rem] leading-tight tracking-[-0.01em]">{currentPred.predicted_value.toFixed(2)}%</span><span className="label text-mute">Your estimate</span></p>
+          </div>
+
+          <ShapRows rows={rows} />
+          <div className="mt-5"><ShapLegend /></div>
+          <p className="mt-6 max-w-[70ch] text-[15px] text-mute">
+            Numbers are HbA1c points. SHAP shows how the model used your inputs. It does not prove that an input causes a change in your HbA1c.
+          </p>
+        </Plate>
+
+        <Plate landed className="lg:col-span-4" i={1} label="Largest effects">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Patient-Level Feature Contributions</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Features pushing the prediction higher (red) or lower (blue) than the base value.</p>
+            <h3 className="label text-mute">Pushed the estimate up most</h3>
+            {topDriver ? (
+              <>
+                <p className="mt-2 text-[2.1rem] leading-tight tracking-[-0.01em]">{signed(topDriver.value)}</p>
+                <p>{topDriver.feature} ({topDriver.display}) added {topDriver.value.toFixed(2)} points.</p>
+              </>
+            ) : <p className="mt-2">No input pushed the estimate up.</p>}
           </div>
-          <div className="p-2 bg-gray-50 dark:bg-slate-700/50 rounded-lg text-gray-400">
-             <Info className="w-5 h-5" />
+          <div className="mt-8 border-t border-hair pt-6">
+            <h3 className="label text-mute">Pulled the estimate down most</h3>
+            {topProtector ? (
+              <>
+                <p className="mt-2 text-[2.1rem] leading-tight tracking-[-0.01em]">{signed(topProtector.value)}</p>
+                <p>{topProtector.feature} ({topProtector.display}) removed {Math.abs(topProtector.value).toFixed(2)} points.</p>
+              </>
+            ) : <p className="mt-2">No input pulled the estimate down.</p>}
           </div>
-        </div>
-
-        <div className="h-80 w-full mt-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart layout="vertical" data={shapData} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#9ca3af" strokeOpacity={0.2} />
-              <XAxis type="number" hide />
-              <YAxis dataKey="feature" type="category" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontWeight: 500}} width={100} />
-              <RechartsTooltip 
-                formatter={(value: any) => [Math.abs(value).toFixed(3), "SHAP Value"]}
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-slate-800)', color: 'var(--tw-colors-gray-100)' }} 
-              />
-              <Bar dataKey="value" barSize={24} radius={[0, 4, 4, 0]}>
-                {shapData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.type === 'positive' ? '#ef4444' : '#3b82f6'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
-          <div className="flex flex-col items-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/50 text-center">
-            <TrendingUp className="w-6 h-6 text-red-500 dark:text-red-400 mb-2" />
-            <h4 className="font-semibold text-gray-800 dark:text-gray-100">Top Risk Driver</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-               {topDriver ? `${topDriver.feature} contributes most strongly to elevated HbA1c prediction.` : 'No significant positive drivers.'}
-            </p>
-          </div>
-          <div className="flex flex-col items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/50 text-center">
-            <TrendingDown className="w-6 h-6 text-blue-500 dark:text-blue-400 mb-2" />
-            <h4 className="font-semibold text-gray-800 dark:text-gray-100">Top Protective Factor</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-               {topProtector ? `${topProtector.feature} acts as a buffer against further elevation.` : 'No significant negative drivers.'}
-            </p>
-          </div>
-        </div>
+        </Plate>
       </div>
-    </div>
+    </>
   );
 };

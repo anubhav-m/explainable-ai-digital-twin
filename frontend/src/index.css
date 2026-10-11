@@ -1,8 +1,354 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --sheet: #f5f4f6;
+  --sheet-warm: #faf6f5;
+  --sheet-cool: #eef3ef;
+  --raised: #fbfafb;
+  --ink: #16181a;
+  --mute: #5c5f63;
+  --hair: #c9c7c4;
+  --seal: #d5ebdd;
+  --st-normal: #2f8f5b;
+  --st-prediabetes: #d99a12;
+  --st-diabetes: #c8321e;
+  --ease: cubic-bezier(0.19, 1, 0.22, 1);
+  color-scheme: light;
+}
+
+.dark {
+  --sheet: #121416;
+  --sheet-warm: #181513;
+  --sheet-cool: #111813;
+  --raised: #1a1c1f;
+  --ink: #ecebee;
+  --mute: #a3a6aa;
+  --hair: #34373a;
+  --seal: #20382b;
+  --st-normal: #4fb783;
+  --st-prediabetes: #e5b13a;
+  --st-diabetes: #ee6a55;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-sheet: var(--sheet);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-mute: var(--mute);
+  --color-hair: var(--hair);
+  --color-seal: var(--seal);
+  --font-sans: "Schibsted Grotesk Variable", "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+  --ease-expo: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
 @layer base {
-  body {
-    @apply bg-gray-50 text-gray-900;
+  html {
+    scrollbar-color: var(--hair) transparent;
+    scrollbar-width: thin;
   }
+  body {
+    min-height: 100vh;
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    /* The sheet is never neutral: it drifts warm at one corner and green at the other */
+    background:
+      radial-gradient(900px 600px at 0 0, var(--sheet-warm), transparent),
+      radial-gradient(900px 600px at 100% 100%, var(--sheet-cool), transparent),
+      var(--sheet);
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: var(--ink);
+    color: var(--sheet);
+  }
+  :focus-visible {
+    outline: 1px solid var(--ink);
+    outline-offset: 3px;
+  }
+  a {
+    text-underline-offset: 4px;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+  input, select, textarea {
+    caret-color: var(--ink);
+  }
+}
+
+@layer components {
+  /* Mono caps token: labels, nav, buttons */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.4;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* Section tokens: a scrolling second row on small screens, inline in the 72px bar when there is room */
+  .topnav {
+    order: 99;
+    display: flex;
+    gap: 28px;
+    width: calc(100% + 2.5rem);
+    margin-inline: -1.25rem;
+    padding-inline: 1.25rem;
+    border-top: 1px solid var(--hair);
+    overflow-x: auto;
+    scrollbar-width: none;
+    --nav-h: 48px;
+    --nav-rule: 13px;
+  }
+  @media (min-width: 640px) {
+    .topnav { width: calc(100% + 4rem); margin-inline: -2rem; padding-inline: 2rem; }
+  }
+  @media (min-width: 1360px) {
+    .topnav {
+      order: 0;
+      width: auto;
+      margin-inline: 0;
+      padding-inline: 0;
+      border-top: 0;
+      overflow: visible;
+      --nav-h: 72px;
+      --nav-rule: 24px;
+    }
+  }
+  .topnav button { height: var(--nav-h); }
+  .topnav .rule { bottom: var(--nav-rule); }
+
+  /* A plate is registered on the sheet by crosshairs at two corners */
+  .plate {
+    position: relative;
+    padding: 28px;
+    animation: view-in 0.2s ease-out both;
+  }
+  .plate::before,
+  .plate::after {
+    content: "";
+    position: absolute;
+    width: 13px;
+    height: 13px;
+    background:
+      linear-gradient(var(--ink), var(--ink)) center / 1px 13px no-repeat,
+      linear-gradient(var(--ink), var(--ink)) center / 13px 1px no-repeat;
+  }
+  /* The authored entrance runs once per load: plates step in and their crosshairs snap on */
+  [data-entrance="true"] .plate {
+    animation: plate-in 0.7s var(--ease) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+  [data-entrance="true"] .plate::before,
+  [data-entrance="true"] .plate::after {
+    animation: cross-in 0.6s var(--ease) both;
+    animation-delay: calc(var(--i, 0) * 70ms + 260ms);
+  }
+  /* A landed plate takes over from its skeleton: the frame and crosshairs hold, only the contents arrive */
+  .plate.landed,
+  .plate.landed::before,
+  .plate.landed::after { animation: none; }
+  .plate.landed > * { animation: view-in 0.3s ease-out both; }
+  .plate::before { left: -6px; top: -6px; }
+  .plate::after { right: -6px; bottom: -6px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--sheet);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 0.1s ease, color 0.1s ease, opacity 0.1s ease;
+  }
+  .btn:hover:not(:disabled) {
+    background: transparent;
+    color: var(--ink);
+  }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-outline {
+    background: transparent;
+    color: var(--ink);
+  }
+  .btn-outline:hover:not(:disabled) {
+    background: var(--ink);
+    color: var(--sheet);
+  }
+
+  .link {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+    cursor: pointer;
+    transition: text-decoration-color 0.1s ease;
+  }
+  .link:hover { text-decoration-color: transparent; }
+
+  .field {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--hair);
+    border-radius: 0;
+    background: var(--raised);
+    color: var(--ink);
+    font-size: 16px;
+    transition: border-color 0.1s ease;
+  }
+  .field::placeholder { color: var(--mute); }
+  .field:hover { border-color: var(--mute); }
+  .field:focus {
+    outline: none;
+    border-color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--ink);
+  }
+
+  /* 8px dot matrix fills the voids */
+  .dots {
+    background-image: radial-gradient(var(--hair) 1px, transparent 1.2px);
+    background-size: 8px 8px;
+  }
+
+  /* Skeleton: holds the plate's shape while data loads */
+  .sk {
+    display: block;
+    background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--sheet) 70%, transparent) 50%, transparent 70%) 0 0 / 220% 100%,
+      color-mix(in srgb, var(--hair) 55%, transparent);
+    animation: shimmer 1.5s linear infinite;
+  }
+
+  /* Height transition for inline panels */
+  .expand {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 0.6s var(--ease), opacity 0.4s var(--ease);
+  }
+  .expand[data-open="true"] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  /* The padding keeps a plate's crosshairs inside the clip */
+  .expand > div { overflow: hidden; min-height: 0; margin: 0 -8px; padding: 0 8px; }
+  .expand[data-open="true"] > div { margin: -8px; padding: 8px; }
+
+  .view { animation: view-in 0.2s ease-out both; }
+
+  /* Rows that dim their neighbours on focus */
+  .rows .row { transition: opacity 0.25s var(--ease); }
+  @media (hover: hover) {
+    .rows:hover .row { opacity: 0.35; }
+    .rows .row:hover { opacity: 1; }
+  }
+
+  [data-entrance="true"] .bar-up,
+  [data-entrance="true"] .bar-down {
+    animation: bar-grow 0.9s var(--ease) both;
+    animation-delay: calc(var(--i, 0) * 60ms + 200ms);
+  }
+  .bar-up { transform-origin: left center; }
+  .bar-down { transform-origin: right center; }
+
+  /* Markers travel to a new position when the value changes */
+  .marker { transition: left 0.9s var(--ease); }
+  [data-entrance="true"] .marker {
+    animation: marker-in 1.1s var(--ease) both;
+    animation-delay: 200ms;
+  }
+
+  .unit { text-transform: none; }
+
+  .seal { transition: transform 0.6s var(--ease); }
+  .seal:hover { transform: translateY(-4px); }
+  .seal-ring {
+    transform-origin: 50% 50%;
+    animation: turn 25s linear infinite;
+  }
+
+  .range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 24px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .range::-webkit-slider-runnable-track { height: 1px; background: var(--ink); }
+  .range::-moz-range-track { height: 1px; background: var(--ink); }
+  .range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    margin-top: -8px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--ink);
+    transition: transform 0.2s var(--ease);
+  }
+  .range::-moz-range-thumb {
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--ink);
+  }
+  .range:hover::-webkit-slider-thumb,
+  .range:active::-webkit-slider-thumb { transform: scale(1.25); }
+}
+
+@keyframes plate-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cross-in {
+  from { opacity: 0; transform: rotate(-90deg) scale(0.2); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes view-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes marker-in {
+  from { left: 0; opacity: 0; }
+}
+@keyframes shimmer {
+  from { background-position: 120% 0, 0 0; }
+  to { background-position: -120% 0, 0 0; }
+}
+@keyframes turn {
+  to { transform: rotate(360deg); }
+}
+
+/* Theme change cross-fades through the View Transitions API */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.35s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .seal-ring, .sk { animation: none !important; }
 }

@@ -9,7 +9,9 @@ import os
 from backend.database.db import db
 
 # Configuration
-SECRET_KEY = os.environ.get("JWT_SECRET", "supersecretkey_change_me_in_prod")
+SECRET_KEY = os.environ.get("JWT_SECRET")
+if not SECRET_KEY:
+    raise ValueError("JWT_SECRET environment variable is missing.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 
